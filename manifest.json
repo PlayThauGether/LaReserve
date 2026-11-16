@@ -1,0 +1,17 @@
+{
+  "name": "La Réserve · Play Thau'Gether",
+  "short_name": "La Réserve",
+  "description": "Inventaire de tout ce que possède l'association Play Thau'Gether",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EFE2D3",
+  "theme_color": "#FAE5D8",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
