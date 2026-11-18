@@ -1,6 +1,6 @@
 // La Réserve PTG : service worker (consultation hors ligne)
 // Changer la version à chaque mise en ligne pour forcer la mise à jour.
-const CACHE = 'reserve-v3';
+const CACHE = 'reserve-v4';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

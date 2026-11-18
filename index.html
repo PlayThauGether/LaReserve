@@ -298,6 +298,7 @@ button.search{width:100%;text-align:left;color:var(--ink3);font-size:16px}
 .stats div{padding:16px 14px 15px;display:flex;flex-direction:column;gap:3px;min-width:0}
 .stats div+div{box-shadow:inset 1px 0 0 var(--hair)}
 .stats b{font-size:clamp(21px,6.4vw,32px);font-weight:300;letter-spacing:-.045em;line-height:1.1;white-space:nowrap}
+.stats b.long{font-size:clamp(16px,4.7vw,28px);line-height:1.45}
 .stats span{font-size:11.5px;color:var(--ink2);line-height:1.3}
 .dash{display:grid;grid-template-columns:minmax(0,1fr);gap:0 36px}
 @media(min-width:900px){.dash{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
@@ -418,6 +419,11 @@ label.item{cursor:pointer}
 }
 .outinfo{display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:12px 16px;border-radius:18px;font-size:13.5px;color:var(--ink);background:rgba(255,255,255,.35);box-shadow:inset 0 0 0 1px rgba(36,23,15,.08)}
 .outinfo svg.i{width:17px;height:17px;margin-top:1px;color:var(--terra)}
+.sq.emo .em,.cemo,.pvem{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1;letter-spacing:0}
+.sq.emo .em{font-size:calc(var(--s) * .5)}
+.cemo{font-size:14px;margin-right:-1px}
+.pvem{font-size:26px}
+.preview .ic:has(.pvem){background:rgba(255,255,255,.65)!important;box-shadow:inset 0 1px 1px #fff}
 </style>
 </head>
 <body>
@@ -546,16 +552,19 @@ const ICONS = {
 const CAT_ICONS = ['dice', 'cards', 'mask', 'crown', 'ghost', 'moon', 'speaker', 'mic', 'music', 'bulb', 'plug', 'tablet', 'camera', 'battery', 'gift', 'trophy', 'star', 'sparkles', 'cup', 'pencil', 'scissors', 'book', 'palette', 'box', 'chair', 'store', 'shirt', 'heart', 'flag', 'key', 'drop', 'dots'];
 
 const DEFAULT_CATS = [
-  { nom: 'Jeux de société', icone: 'dice', couleur: '#2F6E62' },
-  { nom: 'Déguisements et accessoires', icone: 'mask', couleur: '#7A4E8C' },
-  { nom: 'Décors', icone: 'ghost', couleur: '#8E3B2E' },
-  { nom: "Matériel d'animation", icone: 'speaker', couleur: '#3D5A80' },
-  { nom: 'Lots et goodies', icone: 'gift', couleur: '#C0522A' },
-  { nom: 'Fournitures', icone: 'cup', couleur: '#B0813F' },
-  { nom: 'Mobilier et rangement', icone: 'box', couleur: '#5C3A21' },
-  { nom: 'Merch', icone: 'shirt', couleur: '#4F7A3A' },
-  { nom: 'Divers', icone: 'dots', couleur: '#7D6E63' }
+  { nom: 'Jeux de société', icone: 'dice', couleur: '#2F6E62', emoji: '🎲' },
+  { nom: 'Déguisements et accessoires', icone: 'mask', couleur: '#7A4E8C', emoji: '🎭' },
+  { nom: 'Décors', icone: 'ghost', couleur: '#8E3B2E', emoji: '🕯️' },
+  { nom: "Matériel d'animation", icone: 'speaker', couleur: '#3D5A80', emoji: '🎤' },
+  { nom: 'Lots et goodies', icone: 'gift', couleur: '#C0522A', emoji: '🎁' },
+  { nom: 'Fournitures', icone: 'cup', couleur: '#B0813F', emoji: '✏️' },
+  { nom: 'Mobilier et rangement', icone: 'box', couleur: '#5C3A21', emoji: '🗄️' },
+  { nom: 'Merch', icone: 'shirt', couleur: '#4F7A3A', emoji: '👕' },
+  { nom: 'Divers', icone: 'dots', couleur: '#7D6E63', emoji: '📌' }
 ];
+/* Emojis par défaut des catégories de départ, pour celles créées avant l'ajout des emojis */
+const DEFAULT_EMOJI = {};
+DEFAULT_CATS.forEach(c => { DEFAULT_EMOJI[c.nom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()] = c.emoji; });
 
 /* ---------- État ---------- */
 const S = { cats: {}, lieux: {}, objets: {}, kits: {}, sorties: {}, hist: {}, histLoaded: false, loaded: false, admin: false, user: null, online: navigator.onLine, configured: false };
@@ -586,7 +595,9 @@ function TS() { return firebase.database.ServerValue.TIMESTAMP; }
 function plural(n, s, p) { return `${fmtNum(n)} ${n > 1 ? (p || s + 's') : s}`; }
 function lowStock(o) { const s = num(o.seuilAlerte); return s != null && (Number(o.quantite) || 0) <= s; }
 
-function catOf(id) { return S.cats[id] || { nom: 'Sans catégorie', icone: 'dots', couleur: '#9A8B7F' }; }
+function catOf(id) { return S.cats[id] || { nom: 'Sans catégorie', icone: 'dots', couleur: '#9A8B7F', emoji: '' }; }
+function catEmoji(c) { if (!c) return ''; if (typeof c.emoji === 'string') return c.emoji; return DEFAULT_EMOJI[norm(c.nom)] || ''; }
+function catSq(c, cls) { const e = catEmoji(c); return e ? `<span class="sq emo ${cls || ''}" style="--c:${esc(c.couleur)}"><span class="em">${esc(e)}</span></span>` : sq(c.couleur, c.icone, cls); }
 function catList() {
   return Object.entries(S.cats).map(([id, c]) => ({ id, ...c }))
     .sort((a, b) => (a.ordre ?? 999) - (b.ordre ?? 999) || String(a.nom).localeCompare(b.nom, 'fr'));
@@ -836,7 +847,7 @@ function updateCatalogue() {
   const counts = {};
   objList().forEach(o => { const k = S.cats[o.categorieId] ? o.categorieId : '_none'; counts[k] = (counts[k] || 0) + 1; });
   let chips = `<button class="chip ${!UI.cat ? 'on' : ''}" data-act="catChip" data-id="">Tout</button>`;
-  chips += cats.map(c => `<button class="chip ${UI.cat === c.id ? 'on' : ''}" data-act="catChip" data-id="${esc(c.id)}"><i style="background:${esc(c.couleur)}"></i>${esc(c.nom)}</button>`).join('');
+  chips += cats.map(c => `<button class="chip ${UI.cat === c.id ? 'on' : ''}" data-act="catChip" data-id="${esc(c.id)}">${catEmoji(c) ? `<span class="cemo">${esc(catEmoji(c))}</span>` : `<i style="background:${esc(c.couleur)}"></i>`}${esc(c.nom)}</button>`).join('');
   if (counts._none) chips += `<button class="chip ${UI.cat === '_none' ? 'on' : ''}" data-act="catChip" data-id="_none"><i style="background:#9A8B7F"></i>Sans catégorie</button>`;
   $('#catChips').innerHTML = chips;
 
@@ -875,7 +886,7 @@ function updateCatalogue() {
 function cardObj(o) {
   const c = catOf(o.categorieId), e = etatOf(o.etat);
   return `<button class="card" style="--c:${esc(c.couleur)}" data-act="go" data-go="objet=${esc(o.id)}">
-    <span class="stage">${sq(c.couleur, c.icone, 'lg')}${lowStock(o) ? '<span class="badge">Stock bas</span>' : ''}</span>
+    <span class="stage">${catSq(c, 'lg')}${lowStock(o) ? '<span class="badge">Stock bas</span>' : ''}</span>
     <span class="bd">
       <span class="nm">${esc(o.nom)}</span>
       <span class="r2"><span class="qt">${esc(fmtQty(o))}</span>${etatHtml(e)}</span>
@@ -885,7 +896,7 @@ function cardObj(o) {
 function rowObj(o) {
   const c = catOf(o.categorieId), e = etatOf(o.etat);
   return `<button class="item" data-act="go" data-go="objet=${esc(o.id)}">
-    ${sq(c.couleur, c.icone)}
+    ${catSq(c)}
     <span class="tx"><span class="t1">${esc(o.nom)}</span>
       <span class="t2">${etatHtml(e)}<span class="loc">${icon('pin')}${esc(lieuName(o.emplacementId))}</span></span></span>
     <span class="end">${esc(fmtQty(o))}${lowStock(o) ? '<small>Stock bas</small>' : ''}</span>
@@ -914,7 +925,7 @@ function viewObjet(id) {
   return `<div class="fiche">
     <div class="fiche-l">
       <button class="back" data-act="back">${icon('back')}Retour</button>
-      <div class="showcase" style="--c:${esc(c.couleur)}">${sq(c.couleur, c.icone, 'xl')}${lowStock(o) ? '<span class="badge">Stock bas</span>' : ''}</div>
+      <div class="showcase" style="--c:${esc(c.couleur)}">${catSq(c, 'xl')}${lowStock(o) ? '<span class="badge">Stock bas</span>' : ''}</div>
     </div>
     <div class="fiche-r">
       <p class="kicker" style="--c:${esc(c.couleur)}">${S.cats[o.categorieId] ? `<button data-act="catChip" data-id="${esc(o.categorieId)}">${esc(c.nom)}</button>` : esc(c.nom)}</p>
@@ -1213,7 +1224,7 @@ function viewCats() {
   const counts = {};
   objList().forEach(o => { counts[o.categorieId] = (counts[o.categorieId] || 0) + 1; });
   const rows = cats.map((c, i) => {
-    const inner = `${sq(c.couleur, c.icone)}<span class="tx"><span class="t1 wrap">${esc(c.nom)}</span><span class="t2">${plural(counts[c.id] || 0, 'référence')}</span></span>`;
+    const inner = `${catSq(c)}<span class="tx"><span class="t1 wrap">${esc(c.nom)}</span><span class="t2">${plural(counts[c.id] || 0, 'référence')}</span></span>`;
     if (!S.admin) return `<button class="item" data-act="catChip" data-id="${esc(c.id)}">${inner}<span class="chev">${icon('chev')}</span></button>`;
     return `<div class="item"><button class="txbtn" data-act="catChip" data-id="${esc(c.id)}">${inner}</button>
       <span class="tools">
@@ -1239,6 +1250,7 @@ function formCat(id) {
     <div class="mhead"><h2>${isNew ? 'Nouvelle catégorie' : 'Modifier la catégorie'}</h2><button type="button" class="x" data-act="closeModal" aria-label="Fermer">${icon('close')}</button></div>
     <div class="preview"><span class="ic" id="pvIc"></span><b id="pvNom"></b></div>
     <label class="f">Nom *<input name="nom" maxlength="60" value="${esc(c.nom || '')}" autocomplete="off"></label>
+    <label class="f">Emoji <small>optionnel, remplace l'icône dessinée</small><input name="emoji" maxlength="8" value="${esc(catEmoji(c))}" placeholder="Ex. 🎲" autocomplete="off"></label>
     <div class="f">Icône<div class="picker">${CAT_ICONS.map(n => `<label><input type="radio" name="icone" value="${n}" ${n === c.icone ? 'checked' : ''}><span class="opt">${icon(n)}</span></label>`).join('')}</div></div>
     <div class="f">Couleur<div class="picker">${COULEURS.map(col => `<label><input type="radio" name="couleur" value="${col}" ${col === c.couleur ? 'checked' : ''}><span class="opt sw" style="background:${col}"></span></label>`).join('')}</div>
       <label class="custom-col"><input type="radio" name="couleur" value="_perso" ${isCustom ? 'checked' : ''} class="hidden"><input type="color" name="couleurPerso" value="${esc(isCustom ? c.couleur : '#C0522A')}"> Autre couleur</label></div>
@@ -1249,19 +1261,21 @@ function formCat(id) {
   const iconOf = () => { const r = form.querySelector('input[name=icone]:checked'); return r ? r.value : 'dots'; };
   const preview = () => {
     $('#pvIc').style.background = colorOf();
-    $('#pvIc').innerHTML = icon(iconOf());
+    const em = form.emoji.value.trim();
+    $('#pvIc').innerHTML = em ? `<span class="pvem">${esc(em)}</span>` : icon(iconOf());
     $('#pvNom').textContent = form.nom.value.trim() || 'Nom de la catégorie';
   };
   form.couleurPerso.addEventListener('input', () => { form.querySelector('input[value=_perso]').checked = true; preview(); });
   form.addEventListener('change', preview);
   form.nom.addEventListener('input', preview);
+  form.emoji.addEventListener('input', preview);
   preview();
   if (isNew) setTimeout(() => { if (!form.contains(document.activeElement)) form.nom.focus({ preventScroll: true }); }, 350);
   form.addEventListener('submit', e => {
     e.preventDefault();
     const nom = form.nom.value.trim();
     if (!nom) { toast('Le nom est obligatoire'); form.nom.focus(); return; }
-    const data = { nom, icone: iconOf(), couleur: colorOf() };
+    const data = { nom, icone: iconOf(), couleur: colorOf(), emoji: form.emoji.value.trim() };
     if (isNew) {
       data.ordre = catList().length;
       save(ref('categories').push().set(data), 'Catégorie ajoutée');
@@ -1373,7 +1387,7 @@ function viewKit(id) {
     return `<div class="item check ${checked[it.objetId] ? 'done' : ''}">
       <button class="txbtn" data-act="kitCheck" data-kit="${esc(id)}" data-obj="${esc(it.objetId)}" aria-label="Cocher ${esc(o ? o.nom : 'objet')}">
         <span class="box">${icon('check')}</span>
-        <span class="tx"><span class="t1">${esc(o ? o.nom : 'Objet supprimé')}</span>${msg ? `<span class="t2 warn">${esc(msg)}</span>` : `<span class="t2"><span class="dotc" style="background:${esc(c.couleur)}"></span>${esc(c.nom)}</span>`}</span>
+        <span class="tx"><span class="t1">${esc(o ? o.nom : 'Objet supprimé')}</span>${msg ? `<span class="t2 warn">${esc(msg)}</span>` : `<span class="t2">${catEmoji(c) ? `<span class="cemo">${esc(catEmoji(c))}</span>` : `<span class="dotc" style="background:${esc(c.couleur)}"></span>`}${esc(c.nom)}</span>`}</span>
         <span class="end">× ${fmtNum(it.quantite)}</span>
       </button>
       ${o ? `<button class="ibtn" data-act="go" data-go="objet=${esc(it.objetId)}" aria-label="Voir la fiche">${icon('chev')}</button>` : ''}
@@ -1495,7 +1509,7 @@ function itemsEditor(root, items, opts) {
     arr = arr.slice(0, words.length ? 15 : 6);
     res.innerHTML = arr.length ? arr.map(o => {
       const c = catOf(o.categorieId);
-      return `<button type="button" class="kadd" data-add="${esc(o.id)}">${sq(c.couleur, c.icone, 'sm')}<span class="tx"><span class="t1">${esc(o.nom)}</span><span class="t2">${esc(fmtQty(o))}, ${esc(lieuName(o.emplacementId))}</span></span><span class="plus ${inList.has(o.id) ? 'in' : ''}">${icon(inList.has(o.id) ? 'check' : 'plus')}</span></button>`;
+      return `<button type="button" class="kadd" data-add="${esc(o.id)}">${catSq(c, 'sm')}<span class="tx"><span class="t1">${esc(o.nom)}</span><span class="t2">${esc(fmtQty(o))}, ${esc(lieuName(o.emplacementId))}</span></span><span class="plus ${inList.has(o.id) ? 'in' : ''}">${icon(inList.has(o.id) ? 'check' : 'plus')}</span></button>`;
     }).join('') : `<p class="khint">Aucun objet trouvé.</p>`;
   };
   sel.addEventListener('click', e => {
@@ -1593,7 +1607,7 @@ function viewSortie(id) {
       t2 = parts.length ? `<span class="warn">${esc(parts.join(', '))}</span>` : `<span class="okc">Rentré</span>`;
       end = `${fmtNum(it.rentre)} sur ${fmtNum(it.quantite)}`;
     }
-    return `<button class="item" ${o ? `data-act="go" data-go="objet=${esc(it.objetId)}"` : ''}>${sq(c.couleur, c.icone, 'sm')}
+    return `<button class="item" ${o ? `data-act="go" data-go="objet=${esc(it.objetId)}"` : ''}>${catSq(c, 'sm')}
       <span class="tx"><span class="t1">${esc(o ? o.nom : 'Objet supprimé')}</span><span class="t2">${t2}</span></span>
       <span class="end">${end}</span></button>`;
   }).join('');
@@ -2113,7 +2127,7 @@ function viewAccueil() {
   const byName = (a, b) => String(a.nom || '').localeCompare(String(b.nom || ''), 'fr', { sensitivity: 'base' });
   const alertRow = (o, label) => {
     const c = catOf(o.categorieId);
-    return `<button class="item" data-act="go" data-go="objet=${esc(o.id)}">${sq(c.couleur, c.icone, 'sm')}
+    return `<button class="item" data-act="go" data-go="objet=${esc(o.id)}">${catSq(c, 'sm')}
       <span class="tx"><span class="t1">${esc(o.nom)}</span><span class="t2"><span class="loc">${icon('pin')}${esc(lieuName(o.emplacementId))}</span></span></span>
       <span class="end"><small>${esc(label)}</small></span></button>`;
   };
@@ -2130,9 +2144,9 @@ function viewAccueil() {
   const counts = {};
   all.forEach(o => { const key = S.cats[o.categorieId] ? o.categorieId : '_none'; counts[key] = (counts[key] || 0) + 1; });
   const max = Math.max(1, ...Object.values(counts));
-  const repart = cats.map(c => ({ id: c.id, nom: c.nom, couleur: c.couleur, icone: c.icone, n: counts[c.id] || 0 }));
+  const repart = cats.map(c => ({ id: c.id, nom: c.nom, couleur: c.couleur, icone: c.icone, emoji: catEmoji(c), n: counts[c.id] || 0 }));
   if (counts._none) repart.push({ id: '_none', nom: 'Sans catégorie', couleur: '#9A8B7F', icone: 'dots', n: counts._none });
-  const repartRows = repart.map(c => `<button class="item" data-act="catChip" data-id="${esc(c.id)}">${sq(c.couleur, c.icone, 'sm')}
+  const repartRows = repart.map(c => `<button class="item" data-act="catChip" data-id="${esc(c.id)}">${catSq(c, 'sm')}
     <span class="tx"><span class="t1">${esc(c.nom)}</span><span class="bar2"><i style="width:${Math.round(c.n * 100 / max)}%;background:${esc(c.couleur)}"></i></span></span>
     <span class="end">${plural(c.n, 'réf.', 'réf.')}</span></button>`).join('');
   const recents = all.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
@@ -2142,7 +2156,7 @@ function viewAccueil() {
   <div class="stats glass">
     <div><b>${fmtNum(all.length)}</b><span>${all.length > 1 ? 'références' : 'référence'}</span></div>
     <div><b>${fmtNum(totalQ)}</b><span>${totalQ > 1 ? 'objets' : 'objet'}</span></div>
-    <div><b>${(Number(valeur) || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</b><span>valeur totale${hasPerdu ? ', hors perdus' : ''}</span></div>
+    <div><b class="${fmtEur(valeur).length > 8 ? 'long' : ''}">${fmtEur(valeur)}</b><span>valeur totale${hasPerdu ? ', hors perdus' : ''}</span></div>
   </div>
   <div class="dash">
     <div>
